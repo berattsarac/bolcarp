@@ -210,6 +210,14 @@
           <button id="tab-btn-ahmet" onclick="switchReportTab('Ahmet')" class="py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900">Ahmet'in Raporu</button>
         </div>
 
+        <!-- Zaman Filtresi (Günlük / Haftalık / Aylık / Tümü) -->
+        <div class="grid grid-cols-4 gap-1.5 bg-slate-100 p-1 rounded-xl text-center">
+          <button id="filter-today" onclick="setPeriodFilter('today')" class="py-1 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900">Bugün</button>
+          <button id="filter-week" onclick="setPeriodFilter('week')" class="py-1 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900">Haftalık</button>
+          <button id="filter-month" onclick="setPeriodFilter('month')" class="py-1 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900">Aylık</button>
+          <button id="filter-all" onclick="setPeriodFilter('all')" class="py-1 text-xs font-bold rounded-lg bg-white shadow-sm text-indigo-700">Tümü</button>
+        </div>
+
         <!-- Özet Kartları -->
         <div class="grid grid-cols-2 gap-2 text-center">
           <div class="bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
@@ -271,11 +279,12 @@
     let timerInterval = null;
     let sessionSeconds = 0;
 
-    /* Sabit PIN */
+    /* Sabit PIN & Rapor Filtreleri */
     const PARENT_PIN = "1234";
     let activeReportTab = 'Elif';
+    let currentPeriodFilter = 'all'; // 'today', 'week', 'month', 'all'
 
-    /* Web Audio API ile Ses Üretimi (Harici Dosya Gerektirmez) */
+    /* Web Audio API ile Ses Üretimi */
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playBeep(freq, type, duration) {
       try {
@@ -298,8 +307,8 @@
     }
 
     function playSuccessSound() {
-      playBeep(523.25, 'sine', 0.15); // C5
-      setTimeout(() => playBeep(659.25, 'sine', 0.25), 120); // E5
+      playBeep(523.25, 'sine', 0.15);
+      setTimeout(() => playBeep(659.25, 'sine', 0.25), 120);
     }
 
     function playErrorSound() {
@@ -348,7 +357,6 @@
         }
       }
 
-      /* İşlem Mantığı ve Kalansız Bölme Garantisi */
       if (currentMode === 'carpma') {
         currentQuestion.a = factor1;
         currentQuestion.b = factor2;
@@ -362,14 +370,12 @@
         currentQuestion.mathStr = `${product} ÷ ${factor1}`;
       }
 
-      // UI Güncelle
       document.getElementById('question-math').innerText = currentQuestion.mathStr;
       document.getElementById('question-level').innerText = `${currentUser} • Soru ${questionIndex}`;
       enteredAnswer = '';
       updateAnswerDisplay();
     }
 
-    /* Ekran Değişim Fonksiyonları */
     function chooseUser(user) {
       currentUser = user;
       document.getElementById('selected-user-badge').innerText = `Kullanıcı: ${user}`;
@@ -397,7 +403,6 @@
       solvedQuestions.clear();
       updateLiveStats();
 
-      // Süre sayacını başlat
       if (timerInterval) clearInterval(timerInterval);
       timerInterval = setInterval(() => {
         sessionSeconds++;
@@ -437,7 +442,6 @@
       document.getElementById('live-wrong').innerText = `✗ ${sessionWrong}`;
     }
 
-    /* Fiziksel Klavye Desteği */
     window.addEventListener('keydown', (e) => {
       if (!document.getElementById('view-workout').classList.contains('hidden')) {
         if (e.key >= '0' && e.key <= '9') {
@@ -452,7 +456,6 @@
       }
     });
 
-    /* Cevap Değerlendirme */
     function submitAnswer() {
       if (enteredAnswer === '') return;
 
@@ -480,31 +483,33 @@
       setTimeout(generateNewQuestion, 250);
     }
 
-    /* Bulut (Firebase) Veri İşlemleri */
+    /* Bulut (Firebase) Veri İşlemleri - Zaman Damgalı */
+    function getTodayKey() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
     function saveTimeProgress() {
       if (!currentUser) return;
-      db.ref(`kullanicilar/${currentUser}/totalTimeSeconds`).transaction((current) => {
+      const todayKey = getTodayKey();
+      db.ref(`kullanicilar/${currentUser}/dailyTime/${todayKey}`).transaction((current) => {
         return (current || 0) + 1;
       });
     }
 
     function recordStat(user, isCorrect, questionStr, userAns, trueAns) {
-      const userRef = db.ref(`kullanicilar/${user}`);
+      const now = new Date();
+      const timestamp = now.getTime();
+      const dateStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth()+1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       
-      if (isCorrect) {
-        userRef.child('correct').transaction(c => (c || 0) + 1);
-      } else {
-        userRef.child('wrong').transaction(w => (w || 0) + 1);
-        const now = new Date();
-        const dateStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth()+1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        
-        userRef.child('wrongList').push({
-          question: questionStr,
-          given: userAns,
-          expected: trueAns,
-          time: dateStr
-        });
-      }
+      db.ref(`kullanicilar/${user}/questions`).push({
+        correct: isCorrect,
+        question: questionStr,
+        given: userAns,
+        expected: trueAns,
+        time: dateStr,
+        ts: timestamp
+      });
     }
 
     function openParentModal() {
@@ -551,15 +556,76 @@
       renderParentReport(user);
     }
 
+    function setPeriodFilter(period) {
+      currentPeriodFilter = period;
+      const periods = ['today', 'week', 'month', 'all'];
+      periods.forEach(p => {
+        const btn = document.getElementById(`filter-${p}`);
+        if (p === period) {
+          btn.className = "py-1 text-xs font-bold rounded-lg bg-white shadow-sm text-indigo-700";
+        } else {
+          btn.className = "py-1 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900";
+        }
+      });
+      renderParentReport(activeReportTab);
+    }
+
     function renderParentReport(user) {
       db.ref(`kullanicilar/${user}`).once('value', (snapshot) => {
-        const data = snapshot.val() || { totalTimeSeconds: 0, correct: 0, wrong: 0, wrongList: {} };
-        const correct = data.correct || 0;
-        const wrong = data.wrong || 0;
+        const data = snapshot.val() || { questions: {}, dailyTime: {} };
+        const questionsList = data.questions ? Object.values(data.questions) : [];
+        const dailyTimes = data.dailyTime || {};
+
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const startOfWeek = startOfToday - (6 * 24 * 60 * 60 * 1000); // Son 7 gün
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime(); // Bu ayın 1'i
+
+        // Süre Hesaplama
+        let totalSeconds = 0;
+        Object.keys(dailyTimes).forEach(dayKey => {
+          const [y, m, d] = dayKey.split('-').map(Number);
+          const dayTs = new Date(y, m - 1, d).getTime();
+          const sec = dailyTimes[dayKey] || 0;
+
+          if (currentPeriodFilter === 'today' && dayTs >= startOfToday) {
+            totalSeconds += sec;
+          } else if (currentPeriodFilter === 'week' && dayTs >= startOfWeek) {
+            totalSeconds += sec;
+          } else if (currentPeriodFilter === 'month' && dayTs >= startOfMonth) {
+            totalSeconds += sec;
+          } else if (currentPeriodFilter === 'all') {
+            totalSeconds += sec;
+          }
+        });
+
+        // Soru ve Doğruluk Hesaplama
+        let correct = 0;
+        let wrong = 0;
+        let wrongList = [];
+
+        questionsList.forEach(q => {
+          const qTs = q.ts || 0;
+          let match = false;
+
+          if (currentPeriodFilter === 'today' && qTs >= startOfToday) match = true;
+          else if (currentPeriodFilter === 'week' && qTs >= startOfWeek) match = true;
+          else if (currentPeriodFilter === 'month' && qTs >= startOfMonth) match = true;
+          else if (currentPeriodFilter === 'all') match = true;
+
+          if (match) {
+            if (q.correct) {
+              correct++;
+            } else {
+              wrong++;
+              wrongList.push(q);
+            }
+          }
+        });
+
         const total = correct + wrong;
         const rate = total > 0 ? Math.round((correct / total) * 100) : 0;
         
-        const totalSeconds = data.totalTimeSeconds || 0;
         const mins = Math.floor(totalSeconds / 60);
         const hours = Math.floor(mins / 60);
         const remMins = mins % 60;
@@ -573,12 +639,10 @@
         const listContainer = document.getElementById('rep-wrong-list');
         listContainer.innerHTML = '';
 
-        const rawList = data.wrongList ? Object.values(data.wrongList) : [];
-
-        if (rawList.length === 0) {
-          listContainer.innerHTML = '<div class="text-center text-slate-400 py-3">Henüz kaydedilmiş hata yok. Harika!</div>';
+        if (wrongList.length === 0) {
+          listContainer.innerHTML = '<div class="text-center text-slate-400 py-3">Bu dönemde kayıtlı hata yok. Harika!</div>';
         } else {
-          rawList.reverse().slice(0, 50).forEach(item => {
+          wrongList.reverse().slice(0, 50).forEach(item => {
             const row = document.createElement('div');
             row.className = "flex items-center justify-between p-2 bg-white rounded-lg border border-slate-200";
             row.innerHTML = `
