@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ZihinMatik - By HtSarac</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Dokunmatik ekranlar için basma hissi ve seçim engelleme */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .tap-scale {
+      transition: transform 0.1s ease, background-color 0.15s ease;
+    }
+    .tap-scale:active {
+      transform: scale(0.94);
+    }
+    /* Doğru ve Yanlış Animasyonları */
+    @keyframes flashGreen {
+      0%, 100% { background-color: #ffffff; }
+      50% { background-color: #bbf7d0; }
+    }
+    @keyframes flashRed {
+      0%, 100% { background-color: #ffffff; }
+      50% { background-color: #fecaca; }
+    }
+    .anim-correct {
+      animation: flashGreen 0.6s ease;
+    }
+    .anim-wrong {
+      animation: flashRed 0.6s ease;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between items-center p-3 sm:p-5 font-sans">
+
+  <header class="w-full max-w-lg flex items-center justify-between py-2 px-3 bg-white rounded-2xl shadow-sm border border-slate-200">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-lg shadow-md shadow-indigo-200">
+        ZM
+      </div>
+      <div>
+        <h1 class="font-bold text-base sm:text-lg leading-tight text-slate-800">ZihinMatik</h1>
+        <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">By HtSarac</span>
+      </div>
+    </div>
+
+    <!-- Ebeveyn Butonu -->
+    <button onclick="openParentModal()" class="tap-scale flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 text-xs sm:text-sm font-semibold">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+      <span>Ebeveyn</span>
+    </button>
+  </header>
+
+  <main class="w-full max-w-lg my-auto pt-3 pb-3">
+
+    <!-- ADIM 1: KULLANICI SEÇİMİ -->
+    <section id="view-user" class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 text-center">
+      <h2 class="text-2xl font-bold text-slate-800 mb-1">Kim Çalışıyor?</h2>
+      <p class="text-sm text-slate-500 mb-6">Lütfen devam etmek için ismini seç</p>
+      
+      <div class="grid grid-cols-2 gap-4">
+        <button onclick="chooseUser('Elif')" class="tap-scale p-5 rounded-2xl border-2 border-pink-200 bg-pink-50 hover:bg-pink-100 flex flex-col items-center gap-3">
+          <span class="text-4xl">👧</span>
+          <span class="text-lg font-bold text-pink-700">Elif</span>
+          <span class="text-xs text-pink-500 font-medium">100 Soru Kademeli</span>
+        </button>
+
+        <button onclick="chooseUser('Ahmet')" class="tap-scale p-5 rounded-2xl border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 flex flex-col items-center gap-3">
+          <span class="text-4xl">👦</span>
+          <span class="text-lg font-bold text-blue-700">Ahmet</span>
+          <span class="text-xs text-blue-500 font-medium">20 Soru Hızlı Aşama</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ADIM 2: İŞLEM SEÇİMİ -->
+    <section id="view-mode" class="hidden bg-white rounded-3xl p-6 shadow-sm border border-slate-200 text-center">
+      <div class="flex items-center justify-between mb-4">
+        <button onclick="backToUserSelection()" class="text-xs font-semibold text-slate-400 hover:text-slate-600 flex items-center gap-1">
+          ← Geri
+        </button>
+        <span id="selected-user-badge" class="px-3 py-1 text-xs font-bold rounded-full bg-indigo-50 text-indigo-700"></span>
+      </div>
+
+      <h2 class="text-2xl font-bold text-slate-800 mb-1">İşlem Seçimi</h2>
+      <p class="text-sm text-slate-500 mb-6">Bugün hangi alıştırmayı yapmak istersin?</p>
+
+      <div class="grid grid-cols-2 gap-4">
+        <button onclick="chooseMode('carpma')" class="tap-scale p-6 rounded-2xl border-2 border-indigo-200 bg-indigo-50 hover:bg-indigo-100 flex flex-col items-center gap-3">
+          <span class="text-4xl">✖️</span>
+          <span class="text-lg font-bold text-indigo-800">Çarpma</span>
+        </button>
+
+        <button onclick="chooseMode('bolme')" class="tap-scale p-6 rounded-2xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 flex flex-col items-center gap-3">
+          <span class="text-4xl">➗</span>
+          <span class="text-lg font-bold text-emerald-800">Bölme</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ADIM 3: ALIŞTIRMA VE ÇALIŞMA EKRANI -->
+    <section id="view-workout" class="hidden bg-white rounded-3xl p-5 shadow-sm border border-slate-200">
+      <!-- Durum Bilgilendirme Çubuğu -->
+      <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 text-xs font-semibold text-slate-500">
+        <span id="workout-badge" class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg">Elif • Çarpma</span>
+        <div class="flex items-center gap-3">
+          <span id="timer-display" class="font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded">00:00</span>
+          <span class="text-emerald-600 font-bold" id="live-correct">✓ 0</span>
+          <span class="text-rose-500 font-bold" id="live-wrong">✗ 0</span>
+        </div>
+      </div>
+
+      <!-- Soru Kartı -->
+      <div id="card-question" class="rounded-2xl border border-slate-200 p-5 mb-4 text-center transition-colors">
+        <div class="text-xs font-semibold text-slate-400 mb-1 tracking-wider uppercase" id="question-level">Soru 1</div>
+        <div class="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-wide" id="question-math">
+          -- × --
+        </div>
+      </div>
+
+      <!-- Cevap Görüntüleme Kutusu -->
+      <div class="mb-4">
+        <div id="answer-display" class="w-full h-14 bg-slate-50 border-2 border-slate-300 rounded-2xl flex items-center justify-center text-3xl font-black text-indigo-700 tracking-widest font-mono">
+          ?
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2.5">
+        <button onclick="inputDigit('1')" class="tap-scale h-14 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 rounded-xl text-2xl font-bold text-slate-800 shadow-sm">1</button>
+        <button onclick="inputDigit('2')" class="tap-scale h-14 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 rounded-xl text-2xl font-bold text-slate-800 shadow-sm">2</button>
+        <button onclick="inputDigit('3')" class="tap-scale h-14 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 rounded-xl text-2xl font-bold text-slate-800 shadow-sm">3</button>
+
+        <button onclick="inputDigit('4')" class="tap-scale h-14 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 rounded-xl text-2xl font-bold text-slate-800 shadow-sm">4</button>
+        <button onclick="inputDigit('5')" class="tap-scale h-14 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 rounded-xl text-2xl font-bold text-slate-800 shadow-sm">5</button>
+        <button onclick="inputDigit('6')" class="tap-scale h-14 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 rounded-xl text-2xl font-bold text-slate-800 shadow-sm">6</button>
+
+        <button onclick="inputDigit('7')" class="tap-scale h-14 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 rounded-xl text-2xl font-bold text-slate-800 shadow-sm">7</button>
+        <button onclick="inputDigit('8')" class="tap-scale h-14 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 rounded-xl text-2xl font-bold text-slate-800 shadow-sm">8</button>
+        <button onclick="inputDigit('9')" class="tap-scale h-14 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 rounded-xl text-2xl font-bold text-slate-800 shadow-sm">9</button>
+
+        <button onclick="clearInput()" class="tap-scale h-14 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl text-lg font-bold text-rose-600 shadow-sm">C</button>
+        <button onclick="inputDigit('0')" class="tap-scale h-14 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200 rounded-xl text-2xl font-bold text-slate-800 shadow-sm">0</button>
+        <button onclick="backspaceInput()" class="tap-scale h-14 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl text-xl font-bold text-amber-700 shadow-sm">⌫</button>
+
+        <!-- Onayla Butonu -->
+        <button onclick="submitAnswer()" class="tap-scale col-span-3 h-14 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl text-white text-lg font-extrabold shadow-md shadow-emerald-200 flex items-center justify-center gap-2">
+          <span>ONAYLA</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+          </svg>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Alt Bilgi -->
+  <footer class="w-full max-w-lg text-center text-xs text-slate-400 py-2">
+    Program Geliştirici: <strong class="text-slate-600 font-semibold">HtSarac</strong> &bull; Tablet & Telefon Uyumlu
+  </footer>
+
+  <div id="modal-parent" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
+      
+      <!-- Modal Başlık -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">📊</span>
+          <h3 class="font-bold text-base text-slate-800">Ebeveyn Takip Modülü</h3>
+        </div>
+        <button onclick="closeParentModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 font-bold hover:bg-slate-200">✕</button>
+      </div>
+
+      <!-- PIN Giriş Ekranı -->
+      <div id="parent-pin-box" class="py-6 flex flex-col items-center gap-3">
+        <p class="text-xs text-slate-500">Güvenlik için PIN Kodunu Giriniz (Varsayılan: 1234)</p>
+        <div class="flex gap-2">
+          <input type="password" id="parent-pin-input" maxlength="4" placeholder="••••" class="w-32 h-12 text-center text-2xl tracking-widest font-bold border-2 border-slate-300 rounded-xl focus:border-indigo-600 focus:outline-none" />
+          <button onclick="verifyParentPin()" class="px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm">Giriş</button>
+        </div>
+        <span id="parent-pin-error" class="text-xs font-semibold text-rose-500 hidden">Hatalı PIN, tekrar deneyin!</span>
+      </div>
+
+      <!-- Rapor Ekranı (PIN Doğrulandıktan Sonra) -->
+      <div id="parent-report-box" class="hidden flex-col gap-3 pt-3 overflow-y-auto pr-1">
+        <!-- Elif / Ahmet Sekmeleri -->
+        <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
+          <button id="tab-btn-elif" onclick="switchReportTab('Elif')" class="py-1.5 text-xs font-bold rounded-lg bg-white shadow-sm text-indigo-700">Elif'in Raporu</button>
+          <button id="tab-btn-ahmet" onclick="switchReportTab('Ahmet')" class="py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900">Ahmet'in Raporu</button>
+        </div>
+
+        <!-- Özet Kartları -->
+        <div class="grid grid-cols-2 gap-2 text-center">
+          <div class="bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
+            <span class="text-[11px] text-slate-500 block">Çalışma Süresi</span>
+            <strong id="rep-time" class="text-base font-extrabold text-slate-800">0 dk</strong>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
+            <span class="text-[11px] text-slate-500 block">Toplam Soru</span>
+            <strong id="rep-total" class="text-base font-extrabold text-slate-800">0</strong>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
+            <span class="text-[11px] text-slate-500 block">Doğru / Yanlış</span>
+            <strong id="rep-cw" class="text-base font-extrabold text-emerald-600">0 <span class="text-slate-400">/</span> <span class="text-rose-500">0</span></strong>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
+            <span class="text-[11px] text-slate-500 block">Başarı Oranı</span>
+            <strong id="rep-rate" class="text-base font-extrabold text-indigo-600">%0</strong>
+          </div>
+        </div>
+
+        <!-- Yapılan Hatalar Listesi -->
+        <div>
+          <span class="text-xs font-bold text-slate-700 block mb-1">Hatalı Yapılan Sorular:</span>
+          <div id="rep-wrong-list" class="space-y-1.5 max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-2 bg-slate-50 text-xs">
+            <div class="text-center text-slate-400 py-3">Henüz kaydedilmiş hata yok. Harika!</div>
+          </div>
+        </div>
+
+        <!-- Sıfırlama Butonu -->
+        <div class="pt-2">
+          <button onclick="clearAllData()" class="w-full py-2.5 border border-rose-300 text-rose-600 hover:bg-rose-50 rounded-xl text-xs font-bold transition">
+            Tüm Verileri Sıfırla
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    /* Global Uygulama Durumu */
+    let currentUser = null; // 'Elif' veya 'Ahmet'
+    let currentMode = null; // 'carpma' veya 'bolme'
+    let questionIndex = 1;
+    let sessionCorrect = 0;
+    let sessionWrong = 0;
+    let currentQuestion = { a: 0, b: 0, answer: 0, mathStr: '' };
+    let enteredAnswer = '';
+    const solvedQuestions = new Set();
+
+    /* Kronometre Değişkenleri */
+    let timerInterval = null;
+    let sessionSeconds = 0;
+
+    /* Sabit PIN */
+    const PARENT_PIN = "1234";
+    let activeReportTab = 'Elif';
+
+    /* Web Audio API ile Ses Üretimi (Harici Dosya Gerektirmez) */
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(freq, type, duration) {
+      try {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {
+        console.log("Audio not supported yet.");
+      }
+    }
+
+    function playSuccessSound() {
+      playBeep(523.25, 'sine', 0.15); // C5
+      setTimeout(() => playBeep(659.25, 'sine', 0.25), 120); // E5
+    }
+
+    function playErrorSound() {
+      playBeep(220, 'sawtooth', 0.2);
+      setTimeout(() => playBeep(180, 'sawtooth', 0.3), 150);
+    }
+
+    /* Rastgele Sayı Üretici */
+    function getRandomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function generateNewQuestion() {
+      let attempts = 0;
+      let qKey = '';
+      let factor1 = 0;
+      let factor2 = 0;
+
+      while (attempts < 200) {
+        attempts++;
+
+        if (currentUser === 'Elif') {
+          /* ELIF KURALLARI:
+             - 1-100. sorular: 1. çarpan tek haneli (2-9).
+               2. çarpan her 10 soruda artar:
+               1-10: (10-30)
+               11-20: (10-50)
+               21-30: (10-70)
+               ... (her 10 soruda +20)
+             - 100. sorudan sonra: Her iki çarpan 2 haneli (11-99 x 10-99).
+          */
+          if (questionIndex <= 100) {
+            factor1 = getRandomInt(2, 9);
+            const stage = Math.floor((questionIndex - 1) / 10);
+            const maxSecond = Math.min(30 + (stage * 20), 99);
+            factor2 = getRandomInt(10, maxSecond);
+          } else {
+            factor1 = getRandomInt(11, 99);
+            factor2 = getRandomInt(10, 99);
+          }
+        } else {
+          /* AHMET KURALLARI:
+             - 1-20. sorular: 1. çarpan tek hane (2-9), 2. çarpan (10-50).
+             - 21. sorudan sonra: her iki çarpan da 2 haneli (10-99 x 10-99).
+          */
+          if (questionIndex <= 20) {
+            factor1 = getRandomInt(2, 9);
+            factor2 = getRandomInt(10, 50);
+          } else {
+            factor1 = getRandomInt(10, 99);
+            factor2 = getRandomInt(10, 99);
+          }
+        }
+
+        qKey = `${currentMode}_${factor1}_${factor2}`;
+        if (!solvedQuestions.has(qKey)) {
+          solvedQuestions.add(qKey);
+          break;
+        }
+      }
+
+      /* İşlem Mantığı ve Kalansız Bölme Garantisi */
+      if (currentMode === 'carpma') {
+        currentQuestion.a = factor1;
+        currentQuestion.b = factor2;
+        currentQuestion.answer = factor1 * factor2;
+        currentQuestion.mathStr = `${factor1} × ${factor2}`;
+      } else {
+        // Bölme: Çarpımın sonucu bölünen sayı yapılır -> her zaman tam bölünür
+        const product = factor1 * factor2;
+        currentQuestion.a = product;
+        currentQuestion.b = factor1;
+        currentQuestion.answer = factor2;
+        currentQuestion.mathStr = `${product} ÷ ${factor1}`;
+      }
+
+      // UI Güncelle
+      document.getElementById('question-math').innerText = currentQuestion.mathStr;
+      document.getElementById('question-level').innerText = `${currentUser} • Soru ${questionIndex}`;
+      enteredAnswer = '';
+      updateAnswerDisplay();
+    }
+
+    /* Ekran Değişim Fonksiyonları */
+    function chooseUser(user) {
+      currentUser = user;
+      document.getElementById('selected-user-badge').innerText = `Kullanıcı: ${user}`;
+      document.getElementById('view-user').classList.add('hidden');
+      document.getElementById('view-mode').classList.remove('hidden');
+    }
+
+    function backToUserSelection() {
+      document.getElementById('view-mode').classList.add('hidden');
+      document.getElementById('view-user').classList.remove('hidden');
+    }
+
+    function chooseMode(mode) {
+      currentMode = mode;
+      document.getElementById('view-mode').classList.add('hidden');
+      document.getElementById('view-workout').classList.remove('hidden');
+
+      const modeTitle = mode === 'carpma' ? 'Çarpma' : 'Bölme';
+      document.getElementById('workout-badge').innerText = `${currentUser} • ${modeTitle}`;
+
+      questionIndex = 1;
+      sessionCorrect = 0;
+      sessionWrong = 0;
+      sessionSeconds = 0;
+      solvedQuestions.clear();
+      updateLiveStats();
+
+      // Süre sayacını başlat
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        sessionSeconds++;
+        const mins = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
+        const secs = String(sessionSeconds % 60).padStart(2, '0');
+        document.getElementById('timer-display').innerText = `${mins}:${secs}`;
+        saveTimeProgress();
+      }, 1000);
+
+      generateNewQuestion();
+    }
+
+    function inputDigit(digit) {
+      if (enteredAnswer.length < 6) {
+        enteredAnswer += digit;
+        updateAnswerDisplay();
+      }
+    }
+
+    function clearInput() {
+      enteredAnswer = '';
+      updateAnswerDisplay();
+    }
+
+    function backspaceInput() {
+      enteredAnswer = enteredAnswer.slice(0, -1);
+      updateAnswerDisplay();
+    }
+
+    function updateAnswerDisplay() {
+      const box = document.getElementById('answer-display');
+      box.innerText = enteredAnswer === '' ? '?' : enteredAnswer;
+    }
+
+    function updateLiveStats() {
+      document.getElementById('live-correct').innerText = `✓ ${sessionCorrect}`;
+      document.getElementById('live-wrong').innerText = `✗ ${sessionWrong}`;
+    }
+
+    /* Fiziksel Klavye Desteği */
+    window.addEventListener('keydown', (e) => {
+      if (!document.getElementById('view-workout').classList.contains('hidden')) {
+        if (e.key >= '0' && e.key <= '9') {
+          inputDigit(e.key);
+        } else if (e.key === 'Enter') {
+          submitAnswer();
+        } else if (e.key === 'Backspace') {
+          backspaceInput();
+        } else if (e.key === 'Escape' || e.key.toLowerCase() === 'c') {
+          clearInput();
+        }
+      }
+    });
+
+    /* Cevap Değerlendirme */
+    function submitAnswer() {
+      if (enteredAnswer === '') return;
+
+      const numVal = parseInt(enteredAnswer, 10);
+      const card = document.getElementById('card-question');
+
+      if (numVal === currentQuestion.answer) {
+        // Doğru Cevap
+        sessionCorrect++;
+        playSuccessSound();
+        card.classList.remove('anim-correct');
+        void card.offsetWidth; // animasyon yeniden tetikleme
+        card.classList.add('anim-correct');
+        recordStat(currentUser, true, currentQuestion.mathStr, numVal, currentQuestion.answer);
+      } else {
+        // Yanlış Cevap
+        sessionWrong++;
+        playErrorSound();
+        card.classList.remove('anim-wrong');
+        void card.offsetWidth;
+        card.classList.add('anim-wrong');
+        recordStat(currentUser, false, currentQuestion.mathStr, numVal, currentQuestion.answer);
+      }
+
+      updateLiveStats();
+      questionIndex++;
+      setTimeout(generateNewQuestion, 250);
+    }
+
+    function getStoredData() {
+      const empty = {
+        Elif: { totalTimeSeconds: 0, correct: 0, wrong: 0, wrongList: [] },
+        Ahmet: { totalTimeSeconds: 0, correct: 0, wrong: 0, wrongList: [] }
+      };
+      const raw = localStorage.getItem('zm_user_data_v1');
+      if (!raw) return empty;
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        return empty;
+      }
+    }
+
+    function saveStoredData(data) {
+      localStorage.setItem('zm_user_data_v1', JSON.stringify(data));
+    }
+
+    function saveTimeProgress() {
+      if (!currentUser) return;
+      const data = getStoredData();
+      data[currentUser].totalTimeSeconds += 1;
+      saveStoredData(data);
+    }
+
+    function recordStat(user, isCorrect, questionStr, userAns, trueAns) {
+      const data = getStoredData();
+      if (isCorrect) {
+        data[user].correct += 1;
+      } else {
+        data[user].wrong += 1;
+        const now = new Date();
+        const dateStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth()+1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        data[user].wrongList.unshift({
+          question: questionStr,
+          given: userAns,
+          expected: trueAns,
+          time: dateStr
+        });
+        // En fazla 50 hata sakla
+        if (data[user].wrongList.length > 50) {
+          data[user].wrongList.pop();
+        }
+      }
+      saveStoredData(data);
+    }
+
+    function openParentModal() {
+      const modal = document.getElementById('modal-parent');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.getElementById('parent-pin-input').value = '';
+      document.getElementById('parent-pin-error').classList.add('hidden');
+      document.getElementById('parent-pin-box').classList.remove('hidden');
+      document.getElementById('parent-report-box').classList.add('hidden');
+      document.getElementById('parent-report-box').classList.remove('flex');
+    }
+
+    function closeParentModal() {
+      const modal = document.getElementById('modal-parent');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function verifyParentPin() {
+      const input = document.getElementById('parent-pin-input').value;
+      if (input === PARENT_PIN) {
+        document.getElementById('parent-pin-box').classList.add('hidden');
+        document.getElementById('parent-report-box').classList.remove('hidden');
+        document.getElementById('parent-report-box').classList.add('flex');
+        renderParentReport(activeReportTab);
+      } else {
+        document.getElementById('parent-pin-error').classList.remove('hidden');
+      }
+    }
+
+    function switchReportTab(user) {
+      activeReportTab = user;
+      const btnElif = document.getElementById('tab-btn-elif');
+      const btnAhmet = document.getElementById('tab-btn-ahmet');
+
+      if (user === 'Elif') {
+        btnElif.className = "py-1.5 text-xs font-bold rounded-lg bg-white shadow-sm text-indigo-700";
+        btnAhmet.className = "py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900";
+      } else {
+        btnAhmet.className = "py-1.5 text-xs font-bold rounded-lg bg-white shadow-sm text-indigo-700";
+        btnElif.className = "py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900";
+      }
+      renderParentReport(user);
+    }
+
+    function renderParentReport(user) {
+      const data = getStoredData()[user];
+      const total = data.correct + data.wrong;
+      const rate = total > 0 ? Math.round((data.correct / total) * 100) : 0;
+      
+      const mins = Math.floor(data.totalTimeSeconds / 60);
+      const hours = Math.floor(mins / 60);
+      const remMins = mins % 60;
+      const timeStr = hours > 0 ? `${hours} sa ${remMins} dk` : `${remMins} dk`;
+
+      document.getElementById('rep-time').innerText = timeStr;
+      document.getElementById('rep-total').innerText = total;
+      document.getElementById('rep-cw').innerHTML = `${data.correct} <span class="text-slate-400">/</span> <span class="text-rose-500">${data.wrong}</span>`;
+      document.getElementById('rep-rate').innerText = `%${rate}`;
+
+      const listContainer = document.getElementById('rep-wrong-list');
+      listContainer.innerHTML = '';
+
+      if (data.wrongList.length === 0) {
+        listContainer.innerHTML = '<div class="text-center text-slate-400 py-3">Henüz kayıtlı hata yok. Harika!</div>';
+      } else {
+        data.wrongList.forEach(item => {
+          const row = document.createElement('div');
+          row.className = "flex items-center justify-between p-2 bg-white rounded-lg border border-slate-200";
+          row.innerHTML = `
+            <div>
+              <strong class="text-slate-800">${item.question}</strong>
+              <span class="text-[10px] text-slate-400 block">${item.time}</span>
+            </div>
+            <div class="text-right">
+              <span class="text-rose-600 line-through mr-1">${item.given}</span>
+              <span class="text-emerald-600 font-bold">✓ ${item.expected}</span>
+            </div>
+          `;
+          listContainer.appendChild(row);
+        });
+      }
+    }
+
+    function clearAllData() {
+      if (confirm('Tüm geçmiş alıştırma ve hata istatistikleri sıfırlansın mı?')) {
+        localStorage.removeItem('zm_user_data_v1');
+        renderParentReport(activeReportTab);
+      }
+    }
+  </script>
+</body>
+</html>
